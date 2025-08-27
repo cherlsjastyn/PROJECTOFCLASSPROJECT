@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Word Guessing Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+
+    input, button {
+      padding: 8px;
+      font-size: 16px;
+      margin: 5px 0;
+    }
+
+    ul {
+      margin-top: 15px;
+    }
+
+    .correct {
+      color: green;
+      background-color: #d4edda;
+      font-weight: bold;
+    }
+
+    .wrong {
+      color: red;
+      background-color: #f8d7da;
+      font-weight: bold;
+    }
+
+    .log {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Word Setup</h2>
+  <div id="setupPhase">
+    <input type="text" id="wordInput" placeholder="Enter a word" required />
+    <br>
+    <button type="button" id="addBtn">Add Word</button>
+    <button type="button" id="startGameBtn">Start Game</button>
+
+    <div id="hiddenInputs"></div>
+
+    <h3>Word List:</h3>
+    <ul id="wordList"></ul>
+  </div>
+
+  <div id="gamePhase" style="display:none;">
+    <h2>Guess the Words</h2>
+    <input type="text" id="guessInput" placeholder="Guess a word" />
+    <button type="button" id="submitGuessBtn">Submit Guess</button>
+    <div id="throttleLog" class="log"></div>
+    <div id="debounceLog" class="log"></div>
+
+    <h3>Game Word List:</h3>
+    <ul id="gameWordList"></ul>
+
+    <h3>Guess History:</h3>
+    <ul id="guessResults"></ul>
+  </div>
+
+  <script>
+    const addBtn = document.getElementById('addBtn');
+    const wordInput = document.getElementById('wordInput');
+    const wordList = document.getElementById('wordList');
+    const hiddenInputs = document.getElementById('hiddenInputs');
+    const startGameBtn = document.getElementById('startGameBtn');
+
+    const setupPhase = document.getElementById('setupPhase');
+    const gamePhase = document.getElementById('gamePhase');
+
+    const guessInput = document.getElementById('guessInput');
+    const submitGuessBtn = document.getElementById('submitGuessBtn');
+    const throttleLog = document.getElementById('throttleLog');
+    const debounceLog = document.getElementById('debounceLog');
+    const guessResults = document.getElementById('guessResults');
+    const gameWordList = document.getElementById('gameWordList');
+
+    const words = [];
+
+    addBtn.addEventListener('click', () => {
+      const word = wordInput.value.trim();
+      if (word) {
+        words.push(word.toLowerCase());
+
+        const li = document.createElement('li');
+        li.textContent = word;
+        wordList.appendChild(li);
+
+        const input = document.createElement('input');
+
+
+        
+        input.type = 'hidden';
+        input.name = 'word[]';
+        input.value = word;
+        hiddenInputs.appendChild(input);
+
+        wordInput.value = '';
+        wordInput.focus();
+      }
+    });
+
+    startGameBtn.addEventListener('click', () => {
+      if (words.length === 0) {
+        alert("Please add at least one word before starting the game.");
+        return;
+      }
+
+      setupPhase.style.display = 'none';
+      gamePhase.style.display = 'block';
+      guessInput.focus();
+
+      gameWordList.innerHTML = '';
+      words.forEach(word => {
+        const li = document.createElement('li');
+        li.textContent = '_____'; // placeholder
+        li.dataset.word = word;
+        gameWordList.appendChild(li);
+      });
+    });
+
+    function debounce(fn, delay) {
+      let timer;
+      return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), delay);
+      };
+    }
+
+    function throttle(fn, limit) {
+      let lastCall = 0;
+      return function(...args) {
+        const now = Date.now();
+        if (now - lastCall >= limit) {
+          lastCall = now;
+          fn.apply(this, args);
+        }
+      };
+    }
+
+    const handleThrottle = throttle(() => {
+      throttleLog.innerHTML = `<b>Throttle:</b> Typing...`;
+    }, 1000);
+
+    const handleDebounce = debounce((e) => {
+      const value = e.target.value.trim().toLowerCase();
+      if (value) {
+        const found = words.includes(value);
+        debounceLog.innerHTML = `<b>Debounce:</b> Finished typing: "${value}" (${found ? 'correct' : 'incorrect'})`;
+      } else {
+        debounceLog.innerHTML = '';
+      }
+    }, 500);
+
+    guessInput.addEventListener('keyup', (e) => {
+      handleThrottle(e);
+      handleDebounce(e);
+    });
+
+    function revealWord(word) {
+      const items = document.querySelectorAll('#gameWordList li');
+      items.forEach(li => {
+        if (li.dataset.word === word) {
+          li.textContent = word;
+          li.classList.add('correct');
+        }
+      });
+    }
+
+    submitGuessBtn.addEventListener('click', () => {
+      const value = guessInput.value.trim().toLowerCase();
+      if (!value) {
+        alert('Please enter a guess before submitting.');
+        return;
+      }
+
+      const found = words.includes(value);
+
+      if (found) {
+        revealWord(value);
+      }
+
+      const li = document.createElement('li');
+      li.textContent = `"${value}" - ${found ? 'Correct!' : 'Wrong!'}`;
+      li.className = found ? 'correct' : 'wrong';
+      guessResults.appendChild(li);
+
+      guessInput.value = '';
+      guessInput.focus();
+    });
+  </script>
+
+</body>
+</html>

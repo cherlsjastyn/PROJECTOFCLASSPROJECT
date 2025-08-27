@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typing Blocks Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            margin: 0 auto;
+            background-color: #333;
+            border: 3px solid #555;
+            overflow: hidden;
+        }
+
+        .block {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background-color: #4CAF50;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+
+        .block.hit {
+            background-color: #FF5722;
+            transform: scale(1.2);
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        #score-display {
+            font-size: 24px;
+            margin: 20px 0;
+            color: #333;
+        }
+
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+            z-index: 100;
+        }
+
+        #start-button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        #start-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Typing Blocks Game</h1>
+    <div id="score-display">Score: 0</div>
+    <div id="game-container">
+        <div id="game-over">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="final-score">0</span></p>
+            <button id="start-button">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const gameContainer = document.getElementById('game-container');
+        const scoreDisplay = document.getElementById('score-display');
+        const gameOverDisplay = document.getElementById('game-over');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const startButton = document.getElementById('start-button');
+
+        let score = 0;
+        let gameActive = false;
+        let blocks = [];
+        let blockSpeed = 2;
+        let spawnRate = 1500; // milliseconds
+        let spawnInterval;
+        let gameLoop;
+
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+        function startGame() {
+            // Remove all existing blocks
+            blocks.forEach(block => {
+                if (block.element && block.element.parentNode) {
+                    block.element.remove();
+                }
+            });
+            blocks = [];
+
+            // Reset state
+            score = 0;
+            blockSpeed = 2;
+            spawnRate = 1500;
+            gameActive = true;
+            scoreDisplay.textContent = `Score: ${score}`;
+            gameOverDisplay.style.display = 'none';
+
+            // Start spawning and updating blocks
+            spawnInterval = setInterval(spawnBlock, spawnRate);
+            gameLoop = requestAnimationFrame(updateGame);
+        }
+
+        function spawnBlock() {
+            if (!gameActive) return;
+
+            const blockElement = document.createElement('div');
+            blockElement.className = 'block';
+
+            const letter = letters[Math.floor(Math.random() * letters.length)];
+            blockElement.textContent = letter;
+
+            const maxX = gameContainer.offsetWidth - 40;
+            const x = Math.floor(Math.random() * maxX);
+
+            blockElement.style.left = `${x}px`;
+            blockElement.style.top = '0px';
+
+            gameContainer.appendChild(blockElement);
+
+            blocks.push({
+                element: blockElement,
+                letter: letter,
+                x: x,
+                y: 0,
+                hit: false
+            });
+
+            // Increase difficulty over time
+            if (score > 0 && score % 5 === 0) {
+                blockSpeed = Math.min(blockSpeed + 0.2, 8);
+                spawnRate = Math.max(spawnRate - 100, 500);
+                clearInterval(spawnInterval);
+                spawnInterval = setInterval(spawnBlock, spawnRate);
+            }
+        }
+
+        function updateGame() {
+            if (!gameActive) return;
+
+            blocks.forEach(block => {
+                if (!block.hit) {
+                    block.y += blockSpeed;
+                    block.element.style.top = `${block.y}px`;
+
+                    if (block.y > gameContainer.offsetHeight - 40) {
+                        gameOver();
+                    }
+                }
+            });
+
+            // Remove faded out blocks
+            blocks = blocks.filter(block => {
+                if (block.hit && block.element.style.opacity === '0') {
+                    block.element.remove();
+                    return false;
+                }
+                return true;
+            });
+
+            gameLoop = requestAnimationFrame(updateGame);
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+
+            const keyPressed = e.key.toUpperCase();
+            let blockHit = false;
+
+            for (let i = 0; i < blocks.length; i++) {
+                const block = blocks[i];
+                if (!block.hit && block.letter === keyPressed) {
+                    block.hit = true;
+                    block.element.classList.add('hit');
+                    blockHit = true;
+
+                    score++;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    break;
+                }
+            }
+
+            // If incorrect key pressed, subtract a point
+            if (!blockHit) {
+                score = Math.max(score - 1, 0); // prevent negative scores
+                scoreDisplay.textContent = `Score: ${score}`;
+            }
+        });
+
+        function gameOver() {
+            gameActive = false;
+            clearInterval(spawnInterval);
+            cancelAnimationFrame(gameLoop);
+
+            finalScoreDisplay.textContent = score;
+            gameOverDisplay.style.display = 'block';
+        }
+
+        startButton.addEventListener('click', startGame);
+
+        // Start on load
+        startGame();
+    </script>
+</body>
+</html>
