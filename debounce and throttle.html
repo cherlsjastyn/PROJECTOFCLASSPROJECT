@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Debounce vs Throttle Demo</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+  }
+  .box {
+    height: 200px;
+    overflow: auto;
+    border: 2px solid #ccc;
+    margin-bottom: 20px;
+    padding: 10px;
+  }
+  .big-content {
+    height: 1000px;
+    background: linear-gradient(white, lightblue);
+  }
+  .result {
+    font-weight: bold;
+    color: darkblue;
+  }
+</style>
+</head>
+<body>
+
+<h1>Debounce vs Throttle Example</h1>
+
+<h2>1. Debounce (Type here)</h2>
+<input type="text" id="debounceInput" placeholder="Type something..." style="width: 300px;">
+<p>Debounced Output: <span id="debounceOutput" class="result"></span></p>
+
+<hr>
+
+<h2>2. Throttle (Scroll below)</h2>
+<div class="box" id="throttleBox">
+  <div class="big-content"></div>
+</div>
+<p>Throttle Output: <span id="throttleOutput" class="result"></span></p>
+
+<script>
+// Debounce function
+function debounce(func, delay) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => func.apply(this, args), delay);
+  };
+}
+
+// Throttle function
+function throttle(func, limit) {
+  let inThrottle;
+  return function(...args) {
+    if (!inThrottle) {
+      func.apply(this, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+}
+
+// Debounce demo
+const debounceInput = document.getElementById('debounceInput');
+const debounceOutput = document.getElementById('debounceOutput');
+
+debounceInput.addEventListener('input', debounce(function(e) {
+  debounceOutput.textContent = e.target.value;
+  console.log("Debounce fired:", e.target.value);
+}, 500)); // Waits 500ms after typing stops
+
+// Throttle demo
+const throttleBox = document.getElementById('throttleBox');
+const throttleOutput = document.getElementById('throttleOutput');
+
+throttleBox.addEventListener('scroll', throttle(function(e) {
+  throttleOutput.textContent = "Scroll position: " + throttleBox.scrollTop;
+  console.log("Throttle fired: Scroll position", throttleBox.scrollTop);
+}, 500)); // Fires at most once every 500ms
+</script>
+
+</body>
+</html>
